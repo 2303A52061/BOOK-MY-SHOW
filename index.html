@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BookMyShow</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #2c3e50, #3498db);
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #f1c40f;
+      margin-bottom: 20px;
+    }
+    .container {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+    .panel {
+      background: #34495e;
+      border-radius: 10px;
+      padding: 20px;
+      width: 45%;
+      min-width: 320px;
+      margin: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+    .seats {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 5px;
+      margin-top: 15px;
+    }
+    .seat {
+      width: 35px;
+      height: 35px;
+      border-radius: 5px;
+      background: #2ecc71;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .seat.booked { background: #e74c3c; cursor: not-allowed; }
+    .seat.selected { background: #f1c40f; }
+    button {
+      padding: 8px 16px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: #e67e22;
+      color: white;
+      font-weight: bold;
+    }
+    button:hover { background: #d35400; }
+    ul { text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>BookMyShow</h1>
+  <div class="container">
+    <!-- Seat Panel -->
+    <div class="panel">
+      <h2>Select Seat</h2>
+      <label>Movie: 
+        <select id="movieSelect"></select>
+      </label><br><br>
+      <label>Showtime: 
+        <select id="showSelect"></select>
+      </label>
+      <div class="seats" id="seatMap"></div>
+      <p id="selectedInfo">No seat selected</p>
+      <button id="bookBtn">Book Ticket</button>
+      <button id="cancelBtn">Cancel Ticket</button>
+    </div>
+    <!-- Booking Panel -->
+    <div class="panel">
+      <h2>Bookings</h2>
+      <ul id="bookingList"></ul>
+      <h2>Refunds</h2>
+      <ul id="refundList"></ul>
+      <p id="totalRefund"></p>
+    </div>
+  </div>
+
+<script>
+class Movie {
+  constructor(title, duration) {
+    this.title = title;
+    this.duration = duration;
+  }
+}
+class Theater {
+  constructor(name, seats = 100) {
+    this.name = name;
+    this.totalSeats = seats;
+    this.bookedSeats = new Set();
+  }
+  checkAvailability(seatNo) {
+    return !this.bookedSeats.has(seatNo);
+  }
+  bookSeat(seatNo) {
+    if (this.checkAvailability(seatNo)) {
+      this.bookedSeats.add(seatNo);
+      return true;
+    }
+    return false;
+  }
+  cancelSeat(seatNo) {
+    return this.bookedSeats.delete(seatNo);
+  }
+}
+class Ticket {
+  constructor(movie, seatNo, showtime) {
+    this.movie = movie;
+    this.seatNo = seatNo;
+    this.showtime = showtime;
+  }
+}
+class Booking {
+  constructor() {
+    this.tickets = [];
+    this.refunds = [];
+  }
+  createTicket(theater, movie, seatNo, showtime) {
+    if (theater.bookSeat(seatNo)) {
+      const ticket = new Ticket(movie, seatNo, showtime);
+      this.tickets.push(ticket);
+      return ticket;
+    }
+    return null;
+  }
+  cancelTicket(theater, seatNo) {
+    const index = this.tickets.findIndex(t => t.seatNo === seatNo);
+    if (index !== -1) {
+      theater.cancelSeat(seatNo);
+      const refund = 200; // fixed refund amount
+      this.refunds.push({ seatNo, refund });
+      this.tickets.splice(index, 1);
+      return refund;
+    }
+    return null;
+  }
+}
+
+// Movies and shows
+const movies = [
+  new Movie("Inception", 148),
+  new Movie("Interstellar", 169),
+  new Movie("Tenet", 150),
+  new Movie("Dunkirk", 106)
+];
+
+const shows = ["10:00 AM", "1:00 PM", "7:00 PM", "9:00 PM"];
+
+const movieSelect = document.getElementById('movieSelect');
+const showSelect = document.getElementById('showSelect');
+const seatMap = document.getElementById('seatMap');
+const bookingList = document.getElementById('bookingList');
+const refundList = document.getElementById('refundList');
+const totalRefund = document.getElementById('totalRefund');
+const selectedInfo = document.getElementById('selectedInfo');
+
+const theater = new Theater("PVR", 100);
+const bookingSystem = new Booking();
+let selectedSeat = null;
+
+function renderMovies() {
+  movieSelect.innerHTML = movies
+    .map((m, i) => `<option value="${i}">${m.title}</option>`).join('');
+  showSelect.innerHTML = shows
+    .map(s => `<option value="${s}">${s}</option>`).join('');
+}
+function renderSeats() {
+  seatMap.innerHTML = '';
+  for (let i = 1; i <= theater.totalSeats; i++) {
+    const seat = document.createElement('div');
+    seat.className = "seat" + (theater.checkAvailability(i) ? "" : " booked");
+    seat.textContent = i;
+    seat.onclick = () => selectSeat(i);
+    seatMap.appendChild(seat);
+  }
+}
+function selectSeat(seatNo) {
+  selectedSeat = seatNo;
+  if (theater.checkAvailability(seatNo)) {
+    selectedInfo.textContent = `Seat ${seatNo}`;
+  } else {
+    selectedInfo.textContent = `Seat ${seatNo} (Booked)`;
+  }
+  document.querySelectorAll('.seat').forEach(s => s.classList.remove('selected'));
+  seatMap.children[seatNo - 1].classList.add('selected');
+}
+function renderBookings() {
+  bookingList.innerHTML = bookingSystem.tickets
+    .map(t => `<li>${t.movie.title} - Seat ${t.seatNo} @ ${t.showtime}</li>`).join('');
+}
+function renderRefunds() {
+  refundList.innerHTML = bookingSystem.refunds
+    .map(r => `<li>Seat ${r.seatNo} → Refund: ₹${r.refund}</li>`).join('');
+  const total = bookingSystem.refunds.reduce((sum, r) => sum + r.refund, 0);
+  totalRefund.textContent = `Total Refunds: ₹${total}`;
+}
+
+document.getElementById('bookBtn').onclick = () => {
+  if (!selectedSeat) return;
+  const movie = movies[movieSelect.value];
+  const show = showSelect.value;
+  if (bookingSystem.createTicket(theater, movie, selectedSeat, show)) {
+    renderSeats();
+    renderBookings();
+    selectedInfo.textContent = `Booked Seat ${selectedSeat} for ${movie.title} @ ${show}`;
+    selectedSeat = null;
+  } else {
+    alert("Seat already booked!");
+  }
+};
+
+document.getElementById('cancelBtn').onclick = () => {
+  if (!selectedSeat) return;
+  const refund = bookingSystem.cancelTicket(theater, selectedSeat);
+  if (refund) {
+    renderSeats();
+    renderBookings();
+    renderRefunds();
+    selectedInfo.textContent = `Cancelled Seat ${selectedSeat} → Refund: ₹${refund}`;
+    selectedSeat = null;
+  } else {
+    alert("No booking found for this seat.");
+  }
+};
+
+renderMovies();
+renderSeats();
+</script>
+</body>
+</html>
