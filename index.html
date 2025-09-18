@@ -149,15 +149,16 @@ class Booking {
   }
 }
 
-// Movies and shows
+// Updated movies
 const movies = [
-  new Movie("Pushpa 2", 148),
-  new Movie("Billa", 169),
-  new Movie("Rebel", 150),
-  new Movie("Salaar", 106)
+  new Movie("Pushpa 2", 150),
+  new Movie("Rebel", 145),
+  new Movie("Billa", 148),
+  new Movie("Salaar", 155)
 ];
 
-const shows = ["10:00 AM", "1:00 PM", "4:00 PM", "8:00 PM"];
+// Showtimes
+const shows = ["10:00 AM", "1:00 PM", "7:00 PM", "9:00 PM"];
 
 const movieSelect = document.getElementById('movieSelect');
 const showSelect = document.getElementById('showSelect');
@@ -205,7 +206,7 @@ function renderRefunds() {
   refundList.innerHTML = bookingSystem.refunds
     .map(r => `<li>Seat ${r.seatNo} → Refund: ₹${r.refund}</li>`).join('');
   const total = bookingSystem.refunds.reduce((sum, r) => sum + r.refund, 0);
-  totalRefund.textContent = `Total Refunds: ₹${total}`;
+  totalRefund.textContent = total > 0 ? `Total Refunds: ₹${total}` : '';
 }
 
 document.getElementById('bookBtn').onclick = () => {
